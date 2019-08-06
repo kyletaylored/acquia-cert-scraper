@@ -1,3 +1,4 @@
+from flask import escape
 from pprint import pprint
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -18,8 +19,8 @@ def results(request):
     """
     # request_json = request.get_json(silent=True)
     page = request.args.get('page')
-    pprint(request)
-    registry = AcquiaRegistry(page)
+    pprint(request.args)
+    registry = AcquiaRegistry(escape(page))
 
     return registry.get_records()
 
