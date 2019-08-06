@@ -26,7 +26,7 @@ def results(request):
 
     registry = AcquiaRegistry(page)
 
-    return registry.get_json()
+    return registry.get_records()
 
 
 class AcquiaRegistry:
