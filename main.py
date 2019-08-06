@@ -17,13 +17,8 @@ def results(request):
         <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>.
     """
     # request_json = request.get_json(silent=True)
-    request_args = request.args
-
-    if request_args and 'page' in request_args:
-        page = request_args['page']
-    else:
-        page = 0
-
+    page = request.args.get('page')
+    pprint(page)
     registry = AcquiaRegistry(page)
 
     return registry.get_records()
