@@ -18,7 +18,7 @@ def results(request):
     """
     # request_json = request.get_json(silent=True)
     page = request.args.get('page')
-    pprint(page)
+    pprint(request)
     registry = AcquiaRegistry(page)
 
     return registry.get_records()
@@ -93,7 +93,6 @@ class AcquiaRegistry:
         return json.dumps(records)
 
     def lchop(self, s, sub):
-        pprint(len(sub))
         return s[len(sub):]
 
     def clean_country(self, record):
