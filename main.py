@@ -1,8 +1,8 @@
 from flask import escape
 from pprint import pprint
 from bs4 import BeautifulSoup
+from google.cloud import bigquery
 import pandas as pd
-from pandas import DataFrame
 import json
 import requests
 
@@ -20,7 +20,7 @@ def results(request):
     # request_json = request.get_json(silent=True)
 
     # Ternary goof
-    page = escape(request.args.get('page'))
+    page = int(escape(request.args.get('page')))
     page = page if page is not None else 0
 
     pprint('Page param:' + page)
@@ -35,6 +35,10 @@ class AcquiaRegistry:
 
     # Define paging.
     def __init__(self, page=0):
+        # Get integer for bad values
+        if not isinstance(page, int):
+            page = 0
+
         self.page = page
 
     def remove_attrs(self, soup):
@@ -43,20 +47,17 @@ class AcquiaRegistry:
         return soup
 
     def get_html(self):
-        page = self.page
-        # Get integer for bad values
-        if not isinstance(page, int):
-            page = 0
 
         # Prepare parameters
         params = {
-            'page': page,
+            'page': self.page,
             'exam': 'All'
         }
 
         # Run request
         query = requests.get(self.url, params=params)
-
+        pprint(query.text)
+        pprint("URL: "+query.url)
         return query.text
 
     def get_table(self):
