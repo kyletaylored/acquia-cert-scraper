@@ -19,7 +19,9 @@ def results(request):
     """
     # request_json = request.get_json(silent=True)
     page = request.args.get('page')
+    test = request.args.get('blank')
     pprint(request.args)
+    pprint(test)
     registry = AcquiaRegistry(escape(page))
 
     return registry.get_records()
