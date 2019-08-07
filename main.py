@@ -1,7 +1,7 @@
 from flask import escape
 from pprint import pprint
 from bs4 import BeautifulSoup
-from google.cloud import bigquery
+# from google.cloud import bigquery
 import pandas as pd
 import json
 import requests
@@ -26,7 +26,8 @@ def results(request):
     pprint('Page param:' + page)
 
     registry = AcquiaRegistry(page)
-    return registry.get_records()
+    records = registry.get_records()
+    return jsonify(records)
 
 
 class AcquiaRegistry:
