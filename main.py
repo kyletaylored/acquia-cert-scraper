@@ -1,5 +1,6 @@
 from flask import escape
 from flask import jsonify
+from flask_csv import send_csv
 from pprint import pprint
 from bs4 import BeautifulSoup, SoupStrainer
 from urllib.parse import urlparse
@@ -7,6 +8,7 @@ import multiprocessing as mp
 # from google.cloud import bigquery
 import pandas as pd
 import json
+import jsonmerge
 import requests
 import time
 
@@ -39,7 +41,11 @@ def results(request):
 
     registry = AcquiaRegistry(page)
     records = registry.get_records()
-    return jsonify(records)
+
+    if request.args.get('format') == 'csv':
+        return send_csv(records, 'acquia-certs.csv')
+    else:
+        return jsonify(records)
 
 
 class AcquiaRegistry:
@@ -145,8 +151,12 @@ class AcquiaRegistry:
         pool = mp.Pool(processes=2)
         results = pool.map(self.get_new_record, range(1, page + 1))
 
-        # Request all pages
-        return results
+        # Merge into single array
+        records = {}
+        for res in results:
+            records = jsonmerge.merge(records, res)
+
+        return records
 
     def get_new_record(self, page):
         # pprint("Process time: " + str(time.time() - self.time))
