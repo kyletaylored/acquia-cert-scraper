@@ -1,4 +1,5 @@
 from flask import escape
+from flask import jsonify
 from pprint import pprint
 from bs4 import BeautifulSoup
 # from google.cloud import bigquery
@@ -57,7 +58,6 @@ class AcquiaRegistry:
 
         # Run request
         query = requests.get(self.url, params=params)
-        pprint(query.text)
         pprint("URL: "+query.url)
         return query.text
 
