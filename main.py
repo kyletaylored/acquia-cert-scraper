@@ -36,6 +36,10 @@ def results(request):
 
     pprint(request.args)
 
+    # Write to BQ
+    if request.args.get('log') is not None:
+        print("Log to BigQuery")
+
     # Format request
     if request.args.get('format') == 'csv':
         csv = registry.convert_to_csv(records)
