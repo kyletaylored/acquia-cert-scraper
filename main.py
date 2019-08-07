@@ -236,7 +236,7 @@ def env_vars(var):
 
 def bigquery_write_records(client, table, data):
     if client is not None:
-        errors = client.insert_rows_json(table, data, 'guid')
+        errors = client.insert_rows_json(table, data, ['guid'])
         assert errors == []
 
 
