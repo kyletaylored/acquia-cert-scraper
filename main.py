@@ -1,11 +1,14 @@
 from flask import escape
 from flask import jsonify
 from pprint import pprint
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, SoupStrainer
+from urllib.parse import urlparse
+import multiprocessing as mp
 # from google.cloud import bigquery
 import pandas as pd
 import json
 import requests
+import time
 
 
 def results(request):
@@ -20,9 +23,17 @@ def results(request):
     """
     # request_json = request.get_json(silent=True)
 
-    # Ternary goof
-    page = int(escape(request.args.get('page')))
-    page = page if page is not None else 0
+    # Logic goof
+    page = escape(request.args.get('page'))
+
+    if page == 'all':
+        registry = AcquiaRegistry(page)
+        records = registry.get_all_records()
+        return jsonify(records)
+    elif page is not None:
+        page = page
+    else:
+        page = 0
 
     pprint('Page param:' + str(page))
 
@@ -42,23 +53,29 @@ class AcquiaRegistry:
             page = 0
 
         self.page = page
+        self.time = time.time()
 
     def remove_attrs(self, soup):
         for tag in soup.findAll(True):
             tag.attrs = None
         return soup
 
-    def get_html(self):
+    def set_page(self, page):
+        self.page = page
+
+    def get_html(self, page=None):
+
+        if page is None:
+            page = self.page
 
         # Prepare parameters
         params = {
-            'page': self.page,
+            'page': page,
             'exam': 'All'
         }
 
         # Run request
         query = requests.get(self.url, params=params)
-        pprint("URL: "+query.url)
         return query.text
 
     def get_table(self):
@@ -66,6 +83,11 @@ class AcquiaRegistry:
         html = BeautifulSoup(self.get_html(), 'html.parser')
         # Get tables
         tables = pd.read_html(html.prettify(), header=0)
+
+        # Check for empty tables
+        if len(tables) == 0:
+            return False
+
         # Get only table
         data = tables[0]
         # Rename header
@@ -75,9 +97,18 @@ class AcquiaRegistry:
 
     def get_json(self):
         data = self.get_table()
+
+        # Check for no tables
+        if data is False:
+            return False
+
         return data.to_json(orient="records")
 
     def get_records(self, data=None):
+        # Check for bad records
+        if data is False:
+            return False
+
         # Get default data
         if data is None:
             data = self.get_json()
@@ -102,6 +133,44 @@ class AcquiaRegistry:
 
         return records
 
+    def get_all_records(self):
+        # Get all the records.
+        page = self.get_last_page()
+
+        # Run processing pool
+        pool = mp.Pool(processes=6)
+        results = pool.map(self.get_new_record, range(1, page + 1))
+        print(results)
+
+        # Request all pages
+        return results
+
+    def get_new_record(self, page):
+        pprint("Process time: " + str(time.time() - self.time))
+        self.set_page(page)
+        record = self.get_records()
+        return record
+
+    def get_last_page(self):
+        # Get main registry page.
+        query = requests.get(self.url)
+        # Convert to BS4
+        html = BeautifulSoup(query.text, 'html.parser')
+        # Find last paging link
+        link = html.select_one('li.pager__item--last a')
+        # Parse URL for parameters
+        url = urlparse(link.attrs['href'])
+        params = url.query.split('&')
+        # Get page numbers
+        page = 0
+        for param in params:
+            if param.find('page') > -1:
+                p = param.split('=')
+                page = int(p[1])
+                break
+
+        return page
+
     def lchop(self, s, sub):
         return s[len(sub):]
 
@@ -113,6 +182,7 @@ class AcquiaRegistry:
         # Eventually clean org names
         return org
 
+
 # Local testing
 # test = AcquiaRegistry(120)
-# pprint(test.get_records())
+# pprint(test.get_all_records())
