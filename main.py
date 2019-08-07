@@ -18,18 +18,17 @@ def results(request):
         <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>.
     """
     # request_json = request.get_json(silent=True)
-    page = request.args.get('page')
-    test = request.args.get('blank')
-    pprint(request.args)
-    pprint(test)
-    registry = AcquiaRegistry(escape(page))
 
+    # Ternary goof
+    page = escape(request.args.get('page'))
+    page = page if page is not None else 0
+
+    registry = AcquiaRegistry(page)
     return registry.get_records()
 
 
 class AcquiaRegistry:
-    # Setting local TZ because all TCEQ monitors are in Texas.
-
+    # Static URL
     url = "https://certification.acquia.com/registry"
 
     # Define paging.
