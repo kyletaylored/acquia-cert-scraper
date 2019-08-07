@@ -93,6 +93,10 @@ class AcquiaRegistry:
         # Rename header
         data = data.rename(columns={"Name  Sort descending": "Name"})
 
+        # Clean up memory
+        del html
+        del tables
+
         return data
 
     def get_json(self):
@@ -138,9 +142,8 @@ class AcquiaRegistry:
         page = self.get_last_page()
 
         # Run processing pool
-        pool = mp.Pool(processes=6)
+        pool = mp.Pool(processes=2)
         results = pool.map(self.get_new_record, range(1, page + 1))
-        print(results)
 
         # Request all pages
         return results
@@ -168,6 +171,11 @@ class AcquiaRegistry:
                 p = param.split('=')
                 page = int(p[1])
                 break
+
+        # Clean up memory
+        del html
+        del query
+        del link
 
         return page
 
