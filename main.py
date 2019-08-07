@@ -47,10 +47,14 @@ class AcquiaRegistry:
 
         # Prepare parameters
         params = {
-            'page': page
+            'page': page,
+            'exam': 'All'
         }
 
-        return requests.get(self.url, params=params).text
+        # Run request
+        query = requests.get(self.url, params=params)
+
+        return query.text
 
     def get_table(self):
         # Get HTML
@@ -103,3 +107,7 @@ class AcquiaRegistry:
     def clean_org(self, org):
         # Eventually clean org names
         return org
+
+# Local testing
+# test = AcquiaRegistry(120)
+# pprint(test.get_records())
