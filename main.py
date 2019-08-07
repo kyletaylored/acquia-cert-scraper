@@ -1,4 +1,5 @@
 from flask import escape, jsonify, send_file
+from flask_csv import send_csv
 from pprint import pprint
 from bs4 import BeautifulSoup, SoupStrainer
 from urllib.parse import urlparse
@@ -225,9 +226,7 @@ def results(request):
 
     # Format request
     if request.args.get('format') == 'csv':
-        csv = registry.convert_to_csv(records)
-        return send_file(csv, mimetype='text/csv',
-                         attachment_filename='acquia-certs.csv', as_attachment=True)
+        return send_csv(records, 'acquia-certs.csv', cache_timeout=0)
     else:
         return jsonify(records)
 
@@ -237,21 +236,18 @@ def env_vars(var):
     return os.environ.get(var, None)
 
 
-def bigquery_write_records(client, table, data):
-    if client is not None:
-        errors = client.insert_rows_json(table, data, ['guid'])
-        assert errors == []
-
-
 def bigquery_store(data):
     # Prep BigQuery client
     dataset_id = env_vars('BQ_DATASET_ID')  # replace with your dataset ID
     table_id = env_vars('BQ_TABLE_ID')  # replace with your table ID
     if dataset_id is not None and table_id is not None:
+        print("Dataset and Table IDs are set")
         client = bigquery.Client()
         table_ref = client.dataset(dataset_id).table(table_id)
         table = client.get_table(table_ref)  # API request
-        bigquery_write_records(client, table, data)
+        errors = client.insert_rows_json(
+            table=table, json_rows=data, row_ids='guid')
+        assert errors == []
 
 
 # Local testing

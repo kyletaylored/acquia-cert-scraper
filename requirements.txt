@@ -10,8 +10,10 @@ Click==7.0
 csvalidate==1.1.1
 cycler==0.10.0
 Flask==1.1.1
+Flask-CSV==1.2.0
 google-api-core==1.14.2
 google-auth==1.6.3
+google-cloud==0.34.0
 google-cloud-bigquery==1.17.0
 google-cloud-core==1.0.3
 google-resumable-media==0.3.2
