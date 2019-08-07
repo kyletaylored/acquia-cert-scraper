@@ -8,7 +8,6 @@ import multiprocessing as mp
 # from google.cloud import bigquery
 import pandas as pd
 import json
-import jsonmerge
 import requests
 import time
 
@@ -28,20 +27,17 @@ def results(request):
     # Logic goof
     page = escape(request.args.get('page'))
 
+    registry = AcquiaRegistry(page)
+
+    # Get all or 1 page
     if page == 'all':
-        registry = AcquiaRegistry(page)
         records = registry.get_all_records()
-        return jsonify(records)
-    elif page is not None:
-        page = page
     else:
-        page = 0
+        records = registry.get_records()
 
     pprint('Page param:' + str(page))
 
-    registry = AcquiaRegistry(page)
-    records = registry.get_records()
-
+    # Format request
     if request.args.get('format') == 'csv':
         return send_csv(records, 'acquia-certs.csv')
     else:
@@ -152,9 +148,9 @@ class AcquiaRegistry:
         results = pool.map(self.get_new_record, range(1, page + 1))
 
         # Merge into single array
-        records = {}
+        records = []
         for res in results:
-            records = jsonmerge.merge(records, res)
+            records.append(res)
 
         return records
 
@@ -203,4 +199,4 @@ class AcquiaRegistry:
 
 # Local testing
 # test = AcquiaRegistry(120)
-# pprint(test.get_all_records())
+# test.get_all_records()
