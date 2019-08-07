@@ -205,9 +205,11 @@ def results(request):
     # Logic goof
     page = escape(request.args.get('page'))
 
+    registry = AcquiaRegistry()
+
     # Get all or 1 page
     if page == 'all':
-        records = all_records
+        records = registry.get_all_records()
     else:
         records = registry.get_new_record(page)
 
@@ -215,7 +217,8 @@ def results(request):
 
     # Write to BQ
     if request.args.get('log') is not None:
-        print("Log to BigQuery")
+        pprint("Log to BigQuery")
+        bigquery_store(records)
 
     # Format request
     if request.args.get('format') == 'csv':
@@ -236,22 +239,17 @@ def bigquery_write_records(client, table, data):
         errors = client.insert_rows_json(table, data, 'guid')
         assert errors == []
 
+
+def bigquery_store(data):
+    # Prep BigQuery client
+    dataset_id = env_vars('BQ_DATASET_ID')  # replace with your dataset ID
+    table_id = env_vars('BQ_TABLE_ID')  # replace with your table ID
+    if dataset_id is not None and table_id is not None:
+        client = bigquery.Client()
+        table_ref = client.dataset(dataset_id).table(table_id)
+        table = client.get_table(table_ref)  # API request
+        bigquery_write_records(client, table, data)
+
 # Local testing
 # test = AcquiaRegistry(120)
 # test.get_all_records()
-
-
-# Global (instance-wide) scope
-# This computation runs at instance cold-start
-registry = AcquiaRegistry()
-all_records = registry.get_all_records()
-# registry.convert_to_csv(all_records)
-
-# Prep BigQuery client
-dataset_id = env_vars('BQ_DATASET_ID')  # replace with your dataset ID
-table_id = env_vars('BQ_TABLE_ID')  # replace with your table ID
-if dataset_id is not None and table_id is not None:
-    client = bigquery.Client()
-    table_ref = client.dataset(dataset_id).table(table_id)
-    table = client.get_table(table_ref)  # API request
-    bigquery_write_records(client, table, all_records)
