@@ -2,13 +2,15 @@ from flask import escape, jsonify, send_file
 from pprint import pprint
 from bs4 import BeautifulSoup, SoupStrainer
 from urllib.parse import urlparse
+from hashlib import md5
+from google.cloud import bigquery
 import multiprocessing as mp
-# from google.cloud import bigquery
 import pandas as pd
 import json
 import csv
 import requests
 import time
+import os
 
 
 def results(request):
@@ -41,6 +43,11 @@ def results(request):
                          attachment_filename='acquia-certs.csv', as_attachment=True)
     else:
         return jsonify(records)
+
+
+def env_vars(var):
+    # Get environment variables
+    return os.environ.get(var, None)
 
 
 class AcquiaRegistry:
@@ -119,22 +126,29 @@ class AcquiaRegistry:
             data = self.get_json()
 
         records = json.loads(data)
-        for record in records:
+        for r in records:
             # Clean org
-            record["Organization"] = self.clean_org(record["Organization"])
+            r["Organization"] = self.clean_org(r["Organization"])
 
             # Break down certificate
-            certs = record["Certification"].split("-")
-            record["Certificate Name"] = str(certs[0]).strip()
-            record["Certificate Version"] = str(
+            certs = r["Certification"].split("-")
+            r["Certificate Name"] = str(certs[0]).strip()
+            r["Certificate Version"] = str(
                 certs[1]).strip() if len(certs) > 1 else ""
 
             # Process country
-            loc = record["Location"].split(",")
-            record["City"] = loc[0].strip()
-            record["State"] = loc[1].strip()
-            country = self.lchop(record["Location"], loc[0]+", "+loc[1])
-            record["Country"] = self.clean_country(country.strip())
+            loc = r["Location"].split(",")
+            r["City"] = loc[0].strip()
+            r["State"] = loc[1].strip()
+            country = self.lchop(r["Location"], loc[0]+", "+loc[1])
+            r["Country"] = self.clean_country(country.strip())
+
+            # Create GUID
+            hash_str = r["Name"]+r["Certification"]+r["Location"]
+            r["guid"] = self.create_hash(hash_str.encode())
+
+        # Write records to Big Query
+        self.bigquery_write_records(records)
 
         return records
 
@@ -206,6 +220,15 @@ class AcquiaRegistry:
         # Eventually clean org names
         return org
 
+    def create_hash(self, data):
+        hash_str = md5(data)
+        return hash_str.hexdigest()
+
+    @staticmethod
+    def bigquery_write_record(self, data):
+        errors = client.insert_rows_json(table, data, 'guid')  # API request
+        assert errors == []
+
 
 # Local testing
 # test = AcquiaRegistry(120)
@@ -214,4 +237,15 @@ class AcquiaRegistry:
 # Global (instance-wide) scope
 # This computation runs at instance cold-start
 registry = AcquiaRegistry()
-all_records = registry.get_all_records()
+all_records = registry.get_records()
+# registry.convert_to_csv(all_records)
+
+# Prep BigQuery client
+dataset_id = env_vars('BQ_DATASET_ID')  # replace with your dataset ID
+table_id = env_vars('BQ_TABLE_ID')  # replace with your table ID
+if dataset_id is not None and table_id is not None:
+    client = bigquery.Client()
+    table_ref = client.dataset(dataset_id).table(table_id)
+    table = client.get_table(table_ref)  # API request
+else:
+    pprint("No Google Client IDs")
