@@ -256,8 +256,9 @@ if dataset_id is not None and table_id is not None:
     table_ref = client.dataset(dataset_id).table(table_id)
     table = client.get_table(table_ref)  # API request
 else:
-    pprint("No Google Client IDs")
+    pprint('No Google Client IDs')
     client = None
+    table = None
 
 registry = AcquiaRegistry(bq_client=client, bq_table=table)
 all_records = registry.get_records()
