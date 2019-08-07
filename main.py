@@ -13,47 +13,6 @@ import time
 import os
 
 
-def results(request):
-    """HTTP Cloud Function.
-    Args:
-        request (flask.Request): The request object.
-        <http://flask.pocoo.org/docs/1.0/api/#flask.Request>
-    Returns:
-        The response text, or any set of values that can be turned into a
-        Response object using `make_response`
-        <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>.
-    """
-    # request_json = request.get_json(silent=True)
-
-    # Logic goof
-    page = escape(request.args.get('page'))
-
-    # Get all or 1 page
-    if page == 'all':
-        records = all_records
-    else:
-        records = registry.get_new_record(page)
-
-    pprint(request.args)
-
-    # Write to BQ
-    if request.args.get('log') is not None:
-        print("Log to BigQuery")
-
-    # Format request
-    if request.args.get('format') == 'csv':
-        csv = registry.convert_to_csv(records)
-        return send_file(csv, mimetype='text/csv',
-                         attachment_filename='acquia-certs.csv', as_attachment=True)
-    else:
-        return jsonify(records)
-
-
-def env_vars(var):
-    # Get environment variables
-    return os.environ.get(var, None)
-
-
 class AcquiaRegistry:
     # Static URL
     url = "https://certification.acquia.com/registry"
@@ -152,7 +111,7 @@ class AcquiaRegistry:
             r["guid"] = self.create_hash(hash_str.encode())
 
         # Write records to Big Query
-        self.bigquery_write_records(records)
+        self.bigquery_write_record(records)
 
         return records
 
@@ -228,15 +187,60 @@ class AcquiaRegistry:
         hash_str = md5(data)
         return hash_str.hexdigest()
 
-    @staticmethod
     def bigquery_write_record(self, data):
         errors = client.insert_rows_json(table, data, 'guid')  # API request
         assert errors == []
 
 
+"""
+Main functions start
+"""
+
+
+def results(request):
+    """HTTP Cloud Function.
+    Args:
+        request (flask.Request): The request object.
+        <http://flask.pocoo.org/docs/1.0/api/#flask.Request>
+    Returns:
+        The response text, or any set of values that can be turned into a
+        Response object using `make_response`
+        <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>.
+    """
+    # request_json = request.get_json(silent=True)
+
+    # Logic goof
+    page = escape(request.args.get('page'))
+
+    # Get all or 1 page
+    if page == 'all':
+        records = all_records
+    else:
+        records = registry.get_new_record(page)
+
+    pprint(request.args)
+
+    # Write to BQ
+    if request.args.get('log') is not None:
+        print("Log to BigQuery")
+
+    # Format request
+    if request.args.get('format') == 'csv':
+        csv = registry.convert_to_csv(records)
+        return send_file(csv, mimetype='text/csv',
+                         attachment_filename='acquia-certs.csv', as_attachment=True)
+    else:
+        return jsonify(records)
+
+
+def env_vars(var):
+    # Get environment variables
+    return os.environ.get(var, None)
+
 # Local testing
 # test = AcquiaRegistry(120)
 # test.get_all_records()
+
 
 # Global (instance-wide) scope
 # This computation runs at instance cold-start
