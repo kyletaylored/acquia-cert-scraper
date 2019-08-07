@@ -146,7 +146,7 @@ class AcquiaRegistry:
         return results
 
     def get_new_record(self, page):
-        pprint("Process time: " + str(time.time() - self.time))
+        # pprint("Process time: " + str(time.time() - self.time))
         self.set_page(page)
         record = self.get_records()
         return record
