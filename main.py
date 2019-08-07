@@ -26,13 +26,11 @@ def results(request):
     # Logic goof
     page = escape(request.args.get('page'))
 
-    registry = AcquiaRegistry(page)
-
     # Get all or 1 page
     if page == 'all':
-        records = registry.get_all_records()
+        records = all_records
     else:
-        records = registry.get_records()
+        records = registry.get_new_record(page)
 
     pprint(request.args)
 
@@ -155,7 +153,7 @@ class AcquiaRegistry:
 
         return records
 
-    def get_new_record(self, page):
+    def get_new_record(self, page=0):
         # pprint("Process time: " + str(time.time() - self.time))
         self.set_page(page)
         record = self.get_records()
@@ -212,3 +210,8 @@ class AcquiaRegistry:
 # Local testing
 # test = AcquiaRegistry(120)
 # test.get_all_records()
+
+# Global (instance-wide) scope
+# This computation runs at instance cold-start
+registry = AcquiaRegistry()
+all_records = registry.get_all_records()
