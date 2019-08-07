@@ -123,7 +123,8 @@ class AcquiaRegistry:
         # Merge into single array
         records = []
         for res in results:
-            records.append(res)
+            for rec in res:
+                records.append(rec)
 
         return records
 
@@ -161,7 +162,9 @@ class AcquiaRegistry:
     def convert_to_csv(self, data):
         outputFile = open('/tmp/acquia-certs.csv', 'w')  # load csv file
 
-        output = csv.writer(outputFile)  # create a csv.write
+        # Create a csv.writer
+        output = csv.writer(outputFile)
+
         # Write output to CSV
         output.writerow(data[0].keys())  # header row
         for row in data:
@@ -250,6 +253,8 @@ def bigquery_store(data):
         table = client.get_table(table_ref)  # API request
         bigquery_write_records(client, table, data)
 
+
 # Local testing
 # test = AcquiaRegistry(120)
-# test.get_all_records()
+# records = test.get_all_records()
+# test.convert_to_csv(records)
