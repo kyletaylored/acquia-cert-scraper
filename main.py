@@ -148,7 +148,7 @@ class AcquiaRegistry:
         page = self.get_last_page()
 
         # Run processing pool
-        pool = mp.Pool(processes=2)
+        pool = mp.Pool(processes=3)
         results = pool.map(self.get_new_record, range(1, page + 1))
 
         # Merge into single array
