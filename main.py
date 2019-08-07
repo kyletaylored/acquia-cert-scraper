@@ -18,15 +18,13 @@ class AcquiaRegistry:
     url = "https://certification.acquia.com/registry"
 
     # Define paging.
-    def __init__(self, page=0, bq_client=None, bq_table=None):
+    def __init__(self, page=0):
         # Get integer for bad values
         if not isinstance(page, int):
             page = 0
 
         self.page = page
         self.time = time.time()
-        self.client = bq_client
-        self.table = bq_table
 
     def remove_attrs(self, soup):
         for tag in soup.findAll(True):
@@ -112,9 +110,6 @@ class AcquiaRegistry:
             hash_str = r["Name"]+r["Certification"]+r["Location"]
             r["guid"] = self.create_hash(hash_str.encode())
 
-        # Write records to Big Query
-        self.bigquery_write_record(records)
-
         return records
 
     def get_all_records(self):
@@ -189,11 +184,6 @@ class AcquiaRegistry:
         hash_str = md5(data)
         return hash_str.hexdigest()
 
-    def bigquery_write_record(self, data):
-        if self.client is not None:
-            errors = self.client.insert_rows_json(self.table, data, 'guid')
-            assert errors == []
-
 
 """
 Main functions start
@@ -240,6 +230,12 @@ def env_vars(var):
     # Get environment variables
     return os.environ.get(var, None)
 
+
+def bigquery_write_records(client, table, data):
+    if client is not None:
+        errors = client.insert_rows_json(table, data, 'guid')
+        assert errors == []
+
 # Local testing
 # test = AcquiaRegistry(120)
 # test.get_all_records()
@@ -247,6 +243,9 @@ def env_vars(var):
 
 # Global (instance-wide) scope
 # This computation runs at instance cold-start
+registry = AcquiaRegistry()
+all_records = registry.get_all_records()
+# registry.convert_to_csv(all_records)
 
 # Prep BigQuery client
 dataset_id = env_vars('BQ_DATASET_ID')  # replace with your dataset ID
@@ -255,11 +254,4 @@ if dataset_id is not None and table_id is not None:
     client = bigquery.Client()
     table_ref = client.dataset(dataset_id).table(table_id)
     table = client.get_table(table_ref)  # API request
-else:
-    pprint('No Google Client IDs')
-    client = None
-    table = None
-
-registry = AcquiaRegistry(bq_client=client, bq_table=table)
-all_records = registry.get_records()
-# registry.convert_to_csv(all_records)
+    bigquery_write_records(client, table, all_records)
