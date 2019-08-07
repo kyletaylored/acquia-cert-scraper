@@ -100,7 +100,7 @@ class AcquiaRegistry:
             country = self.lchop(record["Location"], loc[0]+", "+loc[1])
             record["Country"] = self.clean_country(country.strip())
 
-        return json.dumps(records)
+        return records
 
     def lchop(self, s, sub):
         return s[len(sub):]
