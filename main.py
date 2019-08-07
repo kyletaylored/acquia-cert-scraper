@@ -23,7 +23,7 @@ def results(request):
     page = int(escape(request.args.get('page')))
     page = page if page is not None else 0
 
-    pprint('Page param:' + page)
+    pprint('Page param:' + str(page))
 
     registry = AcquiaRegistry(page)
     records = registry.get_records()
