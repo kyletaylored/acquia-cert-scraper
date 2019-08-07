@@ -1,6 +1,4 @@
-from flask import escape
-from flask import jsonify
-from flask_csv import send_csv
+from flask import escape, jsonify, send_file
 from pprint import pprint
 from bs4 import BeautifulSoup, SoupStrainer
 from urllib.parse import urlparse
@@ -8,6 +6,7 @@ import multiprocessing as mp
 # from google.cloud import bigquery
 import pandas as pd
 import json
+import csv
 import requests
 import time
 
@@ -35,11 +34,13 @@ def results(request):
     else:
         records = registry.get_records()
 
-    pprint('Page param:' + str(page))
+    pprint(request.args)
 
     # Format request
     if request.args.get('format') == 'csv':
-        return send_csv(records, 'acquia-certs.csv')
+        csv = registry.convert_to_csv(records)
+        return send_file(csv, mimetype='text/csv',
+                         attachment_filename='acquia-certs.csv', as_attachment=True)
     else:
         return jsonify(records)
 
@@ -184,6 +185,17 @@ class AcquiaRegistry:
         del link
 
         return page
+
+    def convert_to_csv(self, data):
+        outputFile = open('/tmp/acquia-certs.csv', 'w')  # load csv file
+
+        output = csv.writer(outputFile)  # create a csv.write
+        # Write output to CSV
+        output.writerow(data[0].keys())  # header row
+        for row in data:
+            output.writerow(row.values())  # values row
+
+        return outputFile
 
     def lchop(self, s, sub):
         return s[len(sub):]
