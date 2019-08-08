@@ -235,8 +235,7 @@ def bigquery_store(data):
         client = bigquery.Client()
         table_ref = client.dataset(dataset_id).table(table_id)
         table = client.get_table(table_ref)  # API request
-        errors = client.insert_rows_json(
-            table=table, json_rows=data, row_ids='guid')
+        errors = client.insert_rows(table, data, kwargs={'row_ids': 'guid'})
         assert errors == []
 
 
