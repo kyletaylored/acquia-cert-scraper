@@ -103,8 +103,8 @@ class AcquiaRegistry:
 
             # Break down certificate
             certs = r["Certification"].split("-")
-            r["Certificate Name"] = str(certs[0]).strip()
-            r["Certificate Version"] = str(
+            r["Certificate_Name"] = str(certs[0]).strip()
+            r["Certificate_Version"] = str(
                 certs[1]).strip() if len(certs) > 1 else ""
 
             # Process country
