@@ -26,13 +26,13 @@ class AcquiaRegistry:
 
         self.page = page
         self.time = time.time()
-        self.client = bigquery.Client()
         self.log = log
 
         # Prep BigQuery client
         self.dataset_id = env_vars('BQ_DATASET_ID')
         self.table_id = env_vars('BQ_TABLE_ID')
         self.bq_check = True if self.dataset_id is not None and self.table_id is not None else False
+        self.client = bigquery.Client() if self.bq_check is True else None
 
     def remove_attrs(self, soup):
         for tag in soup.findAll(True):
@@ -118,9 +118,9 @@ class AcquiaRegistry:
             hash_str = r["Name"]+r["Certification"]+r["Location"]
             r["guid"] = self.create_hash(hash_str.encode())
 
-            # Log to BigQuery
-            if self.log is True:
-                self.bigquery_store(r)
+        # Log to BigQuery
+        if self.log is True and self.client is not None:
+            self.bigquery_store(records)
 
         return records
 
@@ -189,13 +189,22 @@ class AcquiaRegistry:
         hash_str = md5(data)
         return hash_str.hexdigest()
 
-    def bigquery_store(self, record):
-        rows = json.dumps(record)
+    def bigquery_store(self, records):
+        # Extract IDs from records
+        row_ids = []
+        rows = []
+        for record in records:
+            row_ids.append(record.pop('guid'))
+            rows.append(record)
+
+        pprint(row_ids)
+        pprint(rows)
+
         # Connect to table
         table_ref = self.client.dataset(self.dataset_id).table(self.table_id)
         table = self.client.get_table(table_ref)
         # Insert rows
-        err = self.client.insert_rows_json(table, rows, row_ids=['guid'])
+        err = self.client.insert_rows_json(table, rows, row_ids=row_ids)
         assert err == []
 
 
@@ -244,7 +253,7 @@ def env_vars(var):
 
 
 # Local testing
-# test = AcquiaRegistry(120)
+# test = AcquiaRegistry(120, log=True)
 # records = test.get_records()
 # records = test.get_all_records()
 # test.convert_to_csv(records)
