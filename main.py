@@ -129,11 +129,6 @@ class AcquiaRegistry:
             hash_str = r["Name"]+r["Certification"]+r["Location"]
             r["guid"] = self.create_hash(hash_str.encode())
 
-        # Log to BigQuery
-        rows = records.copy()
-        if self.log is True and self.client is not None:
-            self.bigquery_store(rows)
-
         return records
 
     def get_all_records(self):
@@ -244,6 +239,10 @@ def results(request):
         records = registry.get_new_record(page)
 
     pprint(request.args)
+
+    # Log all items at once
+    if log is True:
+        registry.bigquery_store(records)
 
     # Format request
     if request.args.get('format') == 'csv':
