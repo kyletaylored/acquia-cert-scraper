@@ -201,8 +201,7 @@ class AcquiaRegistry:
         table_ref = self.client.dataset(self.dataset_id).table(self.table_id)
         table = self.client.get_table(table_ref)
         # Insert rows
-        err = self.client.insert_rows_json(table, rows, row_ids=row_ids)
-        assert err == []
+        self.client.insert_rows_json(table, rows, row_ids=row_ids)
 
 
 """
