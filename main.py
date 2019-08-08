@@ -124,7 +124,7 @@ class AcquiaRegistry:
             r["guid"] = self.create_hash(hash_str.encode())
 
         # Log to BigQuery
-        rows = records
+        rows = records.copy()
         if self.log is True and self.client is not None:
             self.bigquery_store(rows)
 
@@ -198,16 +198,14 @@ class AcquiaRegistry:
     def bigquery_store(self, records):
         # Extract IDs from records
         row_ids = []
-        rows = []
         for record in records:
-            row_ids.append(record.pop('guid'))
-            rows.append(record)
+            row_ids.append(record['guid'])
 
         # Connect to table
         table_ref = self.client.dataset(self.dataset_id).table(self.table_id)
         table = self.client.get_table(table_ref)
         # Insert rows
-        err = self.client.insert_rows_json(table, rows, row_ids=row_ids)
+        err = self.client.insert_rows_json(table, records, row_ids=row_ids)
         pprint(err)
 
 
