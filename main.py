@@ -190,12 +190,12 @@ class AcquiaRegistry:
         return hash_str.hexdigest()
 
     def bigquery_store(self, record):
-        row = tuple(record.items())
+        rows = [tuple(record.items())]
         # Connect to table
         table_ref = self.client.dataset(self.dataset_id).table(self.table_id)
         table = self.client.get_table(table_ref)
         # Insert rows
-        err = self.client.insert_rows(table, row, kwargs={'row_ids': 'guid'})
+        err = self.client.insert_rows(table, rows, kwargs={'row_ids': 'guid'})
         assert err == []
 
 
