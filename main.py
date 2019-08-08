@@ -1,7 +1,7 @@
 from flask import escape, jsonify, send_file
 from flask_csv import send_csv
 from pprint import pprint
-from bs4 import BeautifulSoup, SoupStrainer
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from hashlib import md5
 from google.cloud import bigquery
@@ -160,18 +160,8 @@ class AcquiaRegistry:
 
         return page
 
-    def convert_to_csv(self, data):
-        outputFile = open('/tmp/acquia-certs.csv', 'w')  # load csv file
-
-        # Create a csv.writer
-        output = csv.writer(outputFile)
-
-        # Write output to CSV
-        output.writerow(data[0].keys())  # header row
-        for row in data:
-            output.writerow(row.values())  # values row
-
-        return outputFile
+    def get_csv(self, data):
+        return send_csv(data, 'acquia-certs.csv', data[0].keys(), cache_timeout=0)
 
     def lchop(self, s, sub):
         return s[len(sub):]
@@ -226,7 +216,7 @@ def results(request):
 
     # Format request
     if request.args.get('format') == 'csv':
-        return send_csv(records, 'acquia-certs.csv', cache_timeout=0)
+        return registry.get_csv(records)
     else:
         return jsonify(records)
 
