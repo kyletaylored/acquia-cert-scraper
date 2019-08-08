@@ -2,6 +2,7 @@ from flask import escape, jsonify, send_file
 from flask_csv import send_csv
 from pprint import pprint
 from bs4 import BeautifulSoup
+from datetime import datetime
 from urllib.parse import urlparse
 from hashlib import md5
 from google.cloud import bigquery
@@ -100,6 +101,10 @@ class AcquiaRegistry:
         for r in records:
             # Clean org
             r["Organization"] = self.clean_org(r["Organization"])
+
+            # Format date
+            date = datetime.strptime(r["Awarded"], '%B %d, %Y')
+            r["Awarded"] = date.strftime('%Y-%m-%d')
 
             # Break down certificate
             certs = r["Certification"].split("-")
@@ -251,7 +256,8 @@ def env_vars(var):
 
 
 # Local testing
-# test = AcquiaRegistry(120, log=True)
+# test = AcquiaRegistry(120)
 # records = test.get_records()
+# pprint(records)
 # records = test.get_all_records()
 # test.convert_to_csv(records)
