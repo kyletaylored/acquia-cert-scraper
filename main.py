@@ -119,8 +119,9 @@ class AcquiaRegistry:
             r["guid"] = self.create_hash(hash_str.encode())
 
         # Log to BigQuery
+        rows = records
         if self.log is True and self.client is not None:
-            self.bigquery_store(records)
+            self.bigquery_store(rows)
 
         return records
 
