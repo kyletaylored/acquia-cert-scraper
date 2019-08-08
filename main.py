@@ -197,9 +197,6 @@ class AcquiaRegistry:
             row_ids.append(record.pop('guid'))
             rows.append(record)
 
-        pprint(row_ids)
-        pprint(rows)
-
         # Connect to table
         table_ref = self.client.dataset(self.dataset_id).table(self.table_id)
         table = self.client.get_table(table_ref)
