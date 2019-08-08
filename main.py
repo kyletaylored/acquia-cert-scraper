@@ -33,7 +33,13 @@ class AcquiaRegistry:
         self.dataset_id = env_vars('BQ_DATASET_ID')
         self.table_id = env_vars('BQ_TABLE_ID')
         self.bq_check = True if self.dataset_id is not None and self.table_id is not None else False
-        self.client = bigquery.Client() if self.bq_check is True else None
+        self.client = None
+        self.table = None
+        if self.bq_check is True:
+            self.client = bigquery.Client()
+            table_ref = self.client.dataset(
+                self.dataset_id).table(self.table_id)
+            self.table = self.client.get_table(table_ref)
 
     def remove_attrs(self, soup):
         for tag in soup.findAll(True):
@@ -201,11 +207,9 @@ class AcquiaRegistry:
         for record in records:
             row_ids.append(record['guid'])
 
-        # Connect to table
-        table_ref = self.client.dataset(self.dataset_id).table(self.table_id)
-        table = self.client.get_table(table_ref)
         # Insert rows
-        err = self.client.insert_rows_json(table, records, row_ids=row_ids)
+        err = self.client.insert_rows_json(
+            self.table, records, row_ids=row_ids)
         pprint(err)
 
 
