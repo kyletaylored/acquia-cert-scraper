@@ -19,13 +19,20 @@ class AcquiaRegistry:
     url = "https://certification.acquia.com/registry"
 
     # Define paging.
-    def __init__(self, page=0):
+    def __init__(self, page=0, log=False):
         # Get integer for bad values
         if not isinstance(page, int):
             page = 0
 
         self.page = page
         self.time = time.time()
+        self.client = bigquery.Client()
+        self.log = log
+
+        # Prep BigQuery client
+        self.dataset_id = env_vars('BQ_DATASET_ID')
+        self.table_id = env_vars('BQ_TABLE_ID')
+        self.bq_check = True if self.dataset_id is not None and self.table_id is not None else False
 
     def remove_attrs(self, soup):
         for tag in soup.findAll(True):
@@ -111,6 +118,10 @@ class AcquiaRegistry:
             hash_str = r["Name"]+r["Certification"]+r["Location"]
             r["guid"] = self.create_hash(hash_str.encode())
 
+            # Log to BigQuery
+            if self.log is True:
+                self.bigquery_store(r)
+
         return records
 
     def get_all_records(self):
@@ -178,6 +189,15 @@ class AcquiaRegistry:
         hash_str = md5(data)
         return hash_str.hexdigest()
 
+    def bigquery_store(self, record):
+        row = tuple(record.items())
+        # Connect to table
+        table_ref = self.client.dataset(self.dataset_id).table(self.table_id)
+        table = self.client.get_table(table_ref)
+        # Insert rows
+        err = self.client.insert_rows(table, row, kwargs={'row_ids': 'guid'})
+        assert err == []
+
 
 """
 Main functions start
@@ -198,8 +218,10 @@ def results(request):
 
     # Logic goof
     page = escape(request.args.get('page'))
+    # Write to BigQuery
+    log = True if request.args.get('log') is not None else False
 
-    registry = AcquiaRegistry()
+    registry = AcquiaRegistry(log=log)
 
     # Get all or 1 page
     if page == 'all':
@@ -208,11 +230,6 @@ def results(request):
         records = registry.get_new_record(page)
 
     pprint(request.args)
-
-    # Write to BQ
-    if request.args.get('log') is not None:
-        pprint("Log to BigQuery")
-        bigquery_store(records)
 
     # Format request
     if request.args.get('format') == 'csv':
@@ -226,20 +243,8 @@ def env_vars(var):
     return os.environ.get(var, None)
 
 
-def bigquery_store(data):
-    # Prep BigQuery client
-    dataset_id = env_vars('BQ_DATASET_ID')  # replace with your dataset ID
-    table_id = env_vars('BQ_TABLE_ID')  # replace with your table ID
-    if dataset_id is not None and table_id is not None:
-        print("Dataset and Table IDs are set")
-        client = bigquery.Client()
-        table_ref = client.dataset(dataset_id).table(table_id)
-        table = client.get_table(table_ref)  # API request
-        errors = client.insert_rows(table, data, kwargs={'row_ids': 'guid'})
-        assert errors == []
-
-
 # Local testing
 # test = AcquiaRegistry(120)
+# records = test.get_records()
 # records = test.get_all_records()
 # test.convert_to_csv(records)
