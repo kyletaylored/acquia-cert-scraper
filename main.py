@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urlparse
 from hashlib import md5
-from google.cloud import bigquery
+from google.cloud import bigquery, pubsub_v1
 import multiprocessing as mp
 import pandas as pd
 import json
@@ -15,20 +15,12 @@ import time
 import os
 
 
-class AcquiaRegistry:
-    # Static URL
-    url = "https://certification.acquia.com/registry"
+class BigQuery:
+    """
+    Create connection to BigQuery instance.
+    """
 
-    # Define paging.
-    def __init__(self, page=0, log=False):
-        # Get integer for bad values
-        if not isinstance(page, int):
-            page = 0
-
-        self.page = page
-        self.time = time.time()
-        self.log = log
-
+    def __init__(self):
         # Prep BigQuery client
         self.dataset_id = env_vars('BQ_DATASET_ID')
         self.table_id = env_vars('BQ_TABLE_ID')
@@ -41,6 +33,54 @@ class AcquiaRegistry:
                 self.dataset_id).table(self.table_id)
             self.table = self.client.get_table(table_ref)
 
+    def record(self, records, id):
+        """Write records to BigQuery instance.
+
+        Arguments:
+            records {list} -- A list of records to cycle through.
+            id {string} -- The ID field that is unique.
+        """
+        # Extract IDs from records
+        row_ids = []
+        for record in records:
+            if record[id]:
+                row_ids.append(record[id])
+
+        # Insert rows
+        err = self.client.insert_rows_json(
+            self.table, records, row_ids=row_ids)
+        pprint(err)
+
+    def query(self, query):
+        query_job = self.client.query(str(query))
+
+        results = query_job.result()  # Waits for job to complete.
+        pprint(results)
+        return results
+
+
+class AcquiaRegistry:
+    # Static URL
+    default = "https://certification.acquia.com/registry"
+    gmaster = "https://certification.acquia.com/registry/grand-masters"
+
+    # Initialize object.
+    def __init__(self, page=0, gm=False, log=False):
+        # Get integer for bad values
+        if not isinstance(page, int):
+            page = 0
+
+        self.page = page
+        self.time = time.time()
+        self.log = log
+        self.gm = gm
+
+        # Switch between regular registry and Grand Masters.
+        if gm is True:
+            self.url = self.gmaster
+        else:
+            self.url = self.default
+
     def remove_attrs(self, soup):
         for tag in soup.findAll(True):
             tag.attrs = None
@@ -48,6 +88,9 @@ class AcquiaRegistry:
 
     def set_page(self, page):
         self.page = page
+
+    def set_gm(self, gm):
+        self.gm = gm
 
     def get_html(self, page=None):
 
@@ -62,6 +105,7 @@ class AcquiaRegistry:
 
         # Run request
         query = requests.get(self.url, params=params)
+
         return query.text
 
     def get_table(self):
@@ -73,11 +117,13 @@ class AcquiaRegistry:
         # Check for empty tables
         if len(tables) == 0:
             return False
-
         # Get only table
         data = tables[0]
-        # Rename header
-        data = data.rename(columns={"Name  Sort descending": "Name"})
+        # Rename header (in steps)
+        n = {"Name  Sort descending": "Name"}
+        gn = {"Grand Master Name  Sort descending": "Name"}
+        data = data.rename(columns=n)
+        data = data.rename(columns=gn)
 
         # Clean up memory
         del html
@@ -104,6 +150,7 @@ class AcquiaRegistry:
             data = self.get_json()
 
         records = json.loads(data)
+        pprint(records)
         for r in records:
             # Clean org
             r["Organization"] = self.clean_org(r["Organization"])
@@ -112,18 +159,19 @@ class AcquiaRegistry:
             date = datetime.strptime(r["Awarded"], '%B %d, %Y')
             r["Awarded"] = date.strftime('%Y-%m-%d')
 
-            # Break down certificate
-            certs = r["Certification"].split("-")
-            r["Certificate_Name"] = str(certs[0]).strip()
-            r["Certificate_Version"] = str(
-                certs[1]).strip() if len(certs) > 1 else ""
-
             # Process country
             loc = r["Location"].split(",")
             r["City"] = loc[0].strip()
             r["State"] = loc[1].strip()
             country = self.lchop(r["Location"], loc[0]+", "+loc[1])
             r["Country"] = self.clean_country(country.strip())
+
+            if self.gm is True:
+                self.process_gm_record(r)
+            else:
+                self.process_record(r)
+
+            pprint(r)
 
             # Create GUID
             hash_str = r["Name"]+r["Certification"]+r["Location"]
@@ -184,6 +232,20 @@ class AcquiaRegistry:
     def lchop(self, s, sub):
         return s[len(sub):]
 
+    def process_gm_record(self, r):
+        # Break down certificate
+        name = r["Credential"]
+        r["Certification"] = r["Credential"]
+        r["Certificate_Name"] = "Grand Master"
+        r["Certificate_Version"] = "D7" if ("7" in str(name)) else "D8"
+
+    def process_record(self, r):
+        # Break down certificate
+        certs = r["Certification"].split("-")
+        r["Certificate_Name"] = str(certs[0]).strip()
+        r["Certificate_Version"] = str(
+            certs[1]).strip() if len(certs) > 1 else ""
+
     def clean_country(self, record):
         # Eventually get list of countries to fix.
         return record
@@ -196,16 +258,58 @@ class AcquiaRegistry:
         hash_str = md5(data)
         return hash_str.hexdigest()
 
-    def bigquery_store(self, records):
-        # Extract IDs from records
-        row_ids = []
-        for record in records:
-            row_ids.append(record['guid'])
 
-        # Insert rows
-        err = self.client.insert_rows_json(
-            self.table, records, row_ids=row_ids)
-        pprint(err)
+class Pubsub:
+    # Pub/Sub vars
+    project_id = "acquia-certifications-api"
+    topic_name = "crawler-fetch"
+    subscription_name = "crawler-run"
+    publisher = None
+    subscriber = None
+
+    def __init__(self):
+        self.publisher = pubsub_v1.PublisherClient()
+        self.subscriber = pubsub_v1.SubscriberClient()
+
+    def publish(self, data):
+
+        # The `topic_path` method creates a fully qualified identifier
+        # in the form `projects/{project_id}/topics/{topic_name}`
+        topic_path = self.publisher.topic_path(
+            self.project_id, self.topic_name)
+
+        # Data must be a bytestring
+        data = self.coder('encode', data)
+        # When you publish a message, the client returns a future.
+        future = self.publisher.publish(topic_path, data=data)
+        print(future.result())
+
+        print('Published messages.')
+
+    def subscribe(self, data):
+        # The `subscription_path` method creates a fully qualified identifier
+        # in the form `projects/{project_id}/subscriptions/{subscription_name}`
+        subscription_path = self.subscriber.subscription_path(
+            self.project_id, self.subscription_name)
+
+        def callback(message):
+            print('Received message: {}'.format(message))
+            message.ack()
+
+        self.subscriber.subscribe(subscription_path, callback=callback)
+
+        # The subscriber is non-blocking. We must keep the main thread from
+        # exiting to allow it to process messages asynchronously in the background.
+        print('Listening for messages on {}'.format(subscription_path))
+        while True:
+            time.sleep(60)
+
+    def coder(self, code, data):
+        char = 'utf-8'
+        # Either encode or decode data.
+        if (code == 'decode'):
+            return data.decode(char)
+        return data.encode(char)
 
 
 """
@@ -226,23 +330,31 @@ def results(request):
     # request_json = request.get_json(silent=True)
 
     # Logic goof
-    page = escape(request.args.get('page'))
+    limit = escape(request.args.get('limit'))
+    fetch = escape(request.args.get('fetch'))
+    gm = escape(request.args.get('gm'))
     # Write to BigQuery
     log = True if request.args.get('log') is not None else False
 
+    # Initialize objects.
     registry = AcquiaRegistry(log=log)
+    bq = BigQuery()
+    pubsub = Pubsub()
 
-    # Get all or 1 page
-    if page == 'all':
-        records = registry.get_all_records()
-    else:
-        records = registry.get_new_record(page)
+    # Run crawler on requst.
+    if fetch is not None:
+        gm = True if gm is not None else False
+        pubsub.publish({"gm": gm})
+
+    # Get records
+    query = "SELECT * FROM certifications.records AS rec ORDER BY rec.Awarded DESC"
+    if limit is not None and int(limit):
+        query = query + " LIMIT " + str(limit)
+
+    # Run query
+    records = bq.query(query)
 
     pprint(request.args)
-
-    # Log all items at once
-    if log is True:
-        registry.bigquery_store(records)
 
     # Format request
     if request.args.get('format') == 'csv':
@@ -251,14 +363,25 @@ def results(request):
         return jsonify(records)
 
 
+def sub(data):
+    """
+    Run function on subscription.
+    """
+    ps = Pubsub()
+    data = ps.coder('decode', data)
+    pprint(data)
+
+
 def env_vars(var):
     # Get environment variables
     return os.environ.get(var, None)
 
 
 # Local testing
-# test = AcquiaRegistry(120)
-# records = test.get_records()
-# pprint(records)
+# ps = Pubsub()
+
+test = AcquiaRegistry(4, gm=True)
+records = test.get_records()
+pprint(records)
 # records = test.get_all_records()
 # test.convert_to_csv(records)
