@@ -406,11 +406,11 @@ def crawl_records(event, context):
     acquia = AcquiaRegistry()
     bq = BigQuery()
     records = acquia.get_all_records()
-    bq.record(records)
+    bq.record(records, 'guid')
 
     acquia.set_gm(True)
     records = acquia.get_all_records()
-    bq.record(records)
+    bq.record(records, 'guid')
 
     print("Records recorded.")
 
