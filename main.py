@@ -423,8 +423,8 @@ def env_vars(var):
 # Local testing
 # ps = Pubsub()
 
-test = AcquiaRegistry(4, gm=True)
+# test = AcquiaRegistry(4, gm=True)
 # records = test.get_records()
-records = test.get_all_records()
-pprint(records)
+# records = test.get_all_records()
+# pprint(records)
 # test.convert_to_csv(records)
