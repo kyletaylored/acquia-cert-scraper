@@ -380,6 +380,9 @@ def sub(data):
     """
     ps = Pubsub()
     data = ps.decode(data)
+    # Subscribe?
+    ps.subscribe(data)
+    pprint("sub func ran")
     pprint(data)
 
 
