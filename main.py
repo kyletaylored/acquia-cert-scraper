@@ -52,6 +52,7 @@ class BigQuery:
         pprint(err)
 
     def query(self, query):
+        pprint(query)
         query_job = self.client.query(str(query))
 
         results = query_job.result()  # Waits for job to complete.
@@ -150,7 +151,7 @@ class AcquiaRegistry:
             data = self.get_json()
 
         records = json.loads(data)
-        pprint(records)
+
         for r in records:
             # Clean org
             r["Organization"] = self.clean_org(r["Organization"])
@@ -166,12 +167,11 @@ class AcquiaRegistry:
             country = self.lchop(r["Location"], loc[0]+", "+loc[1])
             r["Country"] = self.clean_country(country.strip())
 
+            # Process GM differently than standard certs.
             if self.gm is True:
                 self.process_gm_record(r)
             else:
                 self.process_record(r)
-
-            pprint(r)
 
             # Create GUID
             hash_str = r["Name"]+r["Certification"]+r["Location"]
@@ -348,13 +348,10 @@ def results(request):
         gm = True if gm is not None else False
         pubsub.publish({"gm": gm})
 
-    # Get records
+    # Run record query.
     query = "SELECT * FROM certifications.records AS rec ORDER BY rec.Awarded DESC"
-    if limit is not None:
-        query = query + " LIMIT " + str(limit)
-
-    # Run query
     records = bq.query(query)
+    pprint(records)
 
     pprint(request.args)
 
