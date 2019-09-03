@@ -391,9 +391,8 @@ def crawl_records(event, context):
     """.format(context.event_id, context.timestamp))
 
     if 'data' in event:
-        data = base64.b64decode(event['data'])
-        name = ps.decode(data)
-        print(name)
+        data = base64.b64decode(event['data']).decode()
+        print(data)
 
     print(event)
 
