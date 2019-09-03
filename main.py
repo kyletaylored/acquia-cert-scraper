@@ -350,7 +350,7 @@ def results(request):
 
     # Get records
     query = "SELECT * FROM certifications.records AS rec ORDER BY rec.Awarded DESC"
-    if limit is not None and int(limit):
+    if limit is not None:
         query = query + " LIMIT " + str(limit)
 
     # Run query
