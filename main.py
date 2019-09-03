@@ -379,11 +379,12 @@ def sub(data):
     Run function on subscription.
     """
     ps = Pubsub()
-    data = ps.decode(data)
+    msg = ps.decode(data)
     # Subscribe?
     ps.subscribe(data)
-    pprint("sub func ran")
-    pprint(data)
+    print("sub func ran")
+    print(data)
+    print(msg)
 
 
 def env_vars(var):
