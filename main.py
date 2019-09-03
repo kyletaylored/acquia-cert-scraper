@@ -171,7 +171,7 @@ class AcquiaRegistry:
 
             # Format date
             if r["Awarded"] is None:
-                now = datetime.datetime.now()
+                now = datetime.now()
                 r["Awarded"] = now.strftime('%B %d, %Y')
 
             date = datetime.strptime(r["Awarded"], '%B %d, %Y')
