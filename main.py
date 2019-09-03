@@ -59,6 +59,18 @@ class BigQuery:
         pprint(results)
         return results
 
+    def convert_row(self, row):
+        keys = row.keys()
+        values = row.values()
+        return dict(zip(keys, values))
+
+    def get_records(self, query):
+        results = self.query(query)
+        records = []
+        for row in results:
+            records.append(self.convert_row(row))
+        return records
+
 
 class AcquiaRegistry:
     # Static URL
@@ -332,7 +344,7 @@ def results(request):
     # request_json = request.get_json(silent=True)
 
     # Logic goof
-    limit = escape(request.args.get('limit'))
+    # limit = escape(request.args.get('limit'))
     fetch = escape(request.args.get('fetch'))
     gm = escape(request.args.get('gm'))
     # Write to BigQuery
@@ -350,14 +362,9 @@ def results(request):
 
     # Run record query.
     query = "SELECT * FROM certifications.records AS rec ORDER BY rec.Awarded DESC"
-    results = bq.query(query)
-    records = []
-    for row in results:
-        records.append(row)
-        pprint(row)
+    records = bq.get_records(query)
 
     # pprint(records)
-
     pprint(request.args)
 
     # Format request
