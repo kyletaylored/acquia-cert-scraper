@@ -170,6 +170,10 @@ class AcquiaRegistry:
             r["Organization"] = self.clean_org(r["Organization"])
 
             # Format date
+            if r["Awarded"] is None:
+                now = datetime.datetime.now()
+                r["Awarded"] = now.strftime('%B %d, %Y')
+
             date = datetime.strptime(r["Awarded"], '%B %d, %Y')
             r["Awarded"] = date.strftime('%Y-%m-%d')
 
@@ -419,8 +423,8 @@ def env_vars(var):
 # Local testing
 # ps = Pubsub()
 
-# test = AcquiaRegistry(4, gm=True)
+test = AcquiaRegistry(4, gm=True)
 # records = test.get_records()
-# pprint(records)
-# records = test.get_all_records()
+records = test.get_all_records()
+pprint(records)
 # test.convert_to_csv(records)
