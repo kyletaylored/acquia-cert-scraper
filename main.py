@@ -275,11 +275,12 @@ class Pubsub:
 
         # The `topic_path` method creates a fully qualified identifier
         # in the form `projects/{project_id}/topics/{topic_name}`
-        topic_path = self.publisher.topic_path(
-            self.project_id, self.topic_name)
+        pid = self.project_id
+        tn = self.topic_name
+        topic_path = self.publisher.topic_path(pid, tn)
 
         # Data must be a bytestring
-        data = self.coder('encode', data)
+        data = self.encode(data)
         # When you publish a message, the client returns a future.
         future = self.publisher.publish(topic_path, data=data)
         print(future.result())
@@ -304,12 +305,13 @@ class Pubsub:
         while True:
             time.sleep(60)
 
-    def coder(self, code, data):
-        char = 'utf-8'
-        # Either encode or decode data.
-        if (code == 'decode'):
-            return data.decode(char)
-        return data.encode(char)
+    def encode(self, data):
+        data = str(data)
+        return data.encode()
+
+    def decode(self, data):
+        data = str(data)
+        return data.decode()
 
 
 """
@@ -368,7 +370,7 @@ def sub(data):
     Run function on subscription.
     """
     ps = Pubsub()
-    data = ps.coder('decode', data)
+    data = ps.decode(data)
     pprint(data)
 
 
