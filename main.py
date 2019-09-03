@@ -53,11 +53,9 @@ class BigQuery:
         pprint(err)
 
     def query(self, query):
-        pprint(query)
         query_job = self.client.query(str(query))
 
         results = query_job.result()  # Waits for job to complete.
-        pprint(results)
         return results
 
     def convert_row(self, row):
@@ -114,7 +112,10 @@ class AcquiaRegistry:
         # Prepare parameters
         params = {
             'page': page,
-            'exam': 'All'
+            'exam': 'All',
+            'cred': 'All',
+            'order': 'field_full_name',
+            'sort': 'asc'
         }
 
         # Run request
@@ -131,6 +132,7 @@ class AcquiaRegistry:
         # Check for empty tables
         if len(tables) == 0:
             return False
+
         # Get only table
         data = tables[0]
         # Rename header (in steps)
@@ -166,6 +168,7 @@ class AcquiaRegistry:
         records = json.loads(data)
 
         for r in records:
+
             # Clean org
             r["Organization"] = self.clean_org(r["Organization"])
 
@@ -202,7 +205,7 @@ class AcquiaRegistry:
 
         # Run processing pool
         pool = mp.Pool(processes=3)
-        results = pool.map(self.get_new_record, range(1, page + 1))
+        results = pool.map(self.get_new_record, range(0, page + 1))
 
         # Merge into single array
         records = []
@@ -389,7 +392,6 @@ def crawl_records(event, context):
          metadata. The `event_id` field contains the Pub/Sub message ID. The
          `timestamp` field contains the publish time.
     """
-    ps = Pubsub()
 
     print("""This Function was triggered by messageId {} published at {}
     """.format(context.event_id, context.timestamp))
