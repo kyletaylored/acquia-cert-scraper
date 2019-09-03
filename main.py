@@ -374,17 +374,20 @@ def results(request):
         return jsonify(records)
 
 
-def sub(data):
+def crawl_records(data):
     """
-    Run function on subscription.
+    Crawl Acquia certifications.
     """
-    ps = Pubsub()
-    msg = ps.decode(data)
-    # Subscribe?
-    ps.subscribe(data)
-    print("sub func ran")
-    print(data)
-    print(msg)
+    acquia = AcquiaRegistry()
+    bq = BigQuery()
+    records = acquia.get_all_records()
+    bq.record(records)
+
+    acquia.set_gm(True)
+    records = acquia.get_all_records()
+    bq.record(records)
+
+    print("Records recorded.")
 
 
 def env_vars(var):
