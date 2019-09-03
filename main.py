@@ -350,8 +350,13 @@ def results(request):
 
     # Run record query.
     query = "SELECT * FROM certifications.records AS rec ORDER BY rec.Awarded DESC"
-    records = bq.query(query)
-    pprint(records)
+    results = bq.query(query)
+    records = []
+    for row in results:
+        records.append(row)
+        pprint(row)
+
+    # pprint(records)
 
     pprint(request.args)
 
