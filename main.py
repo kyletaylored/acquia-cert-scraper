@@ -387,7 +387,7 @@ def results(request):
         pubsub.publish({"gm": gm})
 
     # Run record query.
-    query = 'SELECT * FROM ' bq.dataset_id '.' + bq.table_id
+    query = 'SELECT * FROM ' + bq.dataset_id + '.' + bq.table_id
     records = bq.get_records(query)
 
     # pprint(records)
