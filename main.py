@@ -21,7 +21,7 @@ class BigQuery:
     Create connection to BigQuery instance.
     """
 
-    def __init__(self):
+    def __init__(self, credentials=None):
         # Prep BigQuery client
         self.dataset_id = env_vars('BQ_DATASET_ID')
         self.table_id = env_vars('BQ_TABLE_ID')
@@ -29,7 +29,13 @@ class BigQuery:
         self.client = None
         self.table = None
         if self.bq_check is True:
-            self.client = bigquery.Client()
+            if credentials is None:
+                self.client = bigquery.Client()
+            else:
+                self.client = bigquery.Client(
+                    credentials=credentials,
+                    project=credentials.project_id,
+                )
             table_ref = self.client.dataset(
                 self.dataset_id).table(self.table_id)
             self.table = self.client.get_table(table_ref)
@@ -255,7 +261,8 @@ class AcquiaRegistry:
     def process_gm_record(self, r):
         # Break down certificate
         name = r["Credential"]
-        r["Certification"] = r["Credential"]
+        del r["Credential"]
+        r["Certification"] = name
         r["Certificate_Name"] = "Grand Master"
         r["Certificate_Version"] = "D7" if ("7" in str(name)) else "D8"
 
