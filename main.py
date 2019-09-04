@@ -61,6 +61,17 @@ class BigQuery:
     def query(self, query):
         query_job = self.client.query(str(query))
 
+        # Run query
+        results = query_job.result()  # Waits for job to complete.
+        return results
+
+    def delete_all(self):
+        did = self.dataset_id
+        tid = self.table_id
+        query = 'DELETE' + did + '.' + tid + 'WHERE true'
+
+        # Run query
+        query_job = self.client.query(query)
         results = query_job.result()  # Waits for job to complete.
         return results
 
@@ -376,7 +387,7 @@ def results(request):
         pubsub.publish({"gm": gm})
 
     # Run record query.
-    query = "SELECT * FROM certifications.records AS rec ORDER BY rec.Awarded DESC"
+    query = 'SELECT * FROM ' bq.dataset_id '.' + bq.table_id
     records = bq.get_records(query)
 
     # pprint(records)
@@ -414,12 +425,21 @@ def crawl_records(event, context):
     """
     acquia = AcquiaRegistry()
     bq = BigQuery()
-    records = acquia.get_all_records()
-    bq.record(records, 'guid')
 
+    # Clear all records
+    res = bq.delete_all()
+    pprint(res)
+
+    # Fetch regular records.
+    records = acquia.get_all_records()
+    res = bq.record(records, 'guid')
+    pprint(res)
+
+    # Fetch Grand Master records.
     acquia.set_gm(True)
     records = acquia.get_all_records()
-    bq.record(records, 'guid')
+    res = bq.record(records, 'guid')
+    pprint(res)
 
     print("Records recorded.")
 

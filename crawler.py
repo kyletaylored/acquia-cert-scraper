@@ -13,8 +13,13 @@ credentials = service_account.Credentials.from_service_account_file(
     scopes=["https://www.googleapis.com/auth/cloud-platform"],
 )
 
-test = AcquiaRegistry(4, gm=True)
-records = test.get_all_records()
+# Get records
+crawler = AcquiaRegistry(4, gm=True)
+records = crawler.get_all_records()
 pprint(records)
+# Connect to BigQuery
 bq = BigQuery(credentials=credentials)
+# Clear out data
+bq.delete_all()
+# Record all records
 bq.record(records, 'guid')
