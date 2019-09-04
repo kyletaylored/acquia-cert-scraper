@@ -56,7 +56,8 @@ class BigQuery:
         # Insert rows
         err = self.client.insert_rows_json(
             self.table, records, row_ids=row_ids)
-        pprint(err)
+
+        return err
 
     def query(self, query):
         query_job = self.client.query(str(query))
@@ -90,25 +91,24 @@ class BigQuery:
 
 class AcquiaRegistry:
     # Static URL
-    default = "https://certification.acquia.com/registry"
-    gmaster = "https://certification.acquia.com/registry/grand-masters"
+    defaultUrl = "https://certification.acquia.com/registry"
+    gmasterUrl = "https://certification.acquia.com/registry/grand-masters"
 
     # Initialize object.
-    def __init__(self, page=0, gm=False, log=False):
+    def __init__(self, page=0, gm=False):
         # Get integer for bad values
         if not isinstance(page, int):
             page = 0
 
         self.page = page
         self.time = time.time()
-        self.log = log
         self.gm = gm
 
         # Switch between regular registry and Grand Masters.
         if gm is True:
-            self.url = self.gmaster
+            self.url = self.gmasterUrl
         else:
-            self.url = self.default
+            self.url = self.defaultUrl
 
     def remove_attrs(self, soup):
         for tag in soup.findAll(True):
@@ -120,6 +120,8 @@ class AcquiaRegistry:
 
     def set_gm(self, gm):
         self.gm = gm
+        # Switch between regular registry and Grand Masters.
+        self.url = self.gmasterUrl if self.gm is True else self.defaultUrl
 
     def get_html(self, page=None):
 
@@ -137,7 +139,7 @@ class AcquiaRegistry:
 
         # Run request
         query = requests.get(self.url, params=params)
-
+        pprint(query.url)
         return query.text
 
     def get_table(self):
@@ -233,7 +235,6 @@ class AcquiaRegistry:
         return records
 
     def get_new_record(self, page=0):
-        # pprint("Process time: " + str(time.time() - self.time))
         self.set_page(page)
         record = self.get_records()
         return record
@@ -271,8 +272,12 @@ class AcquiaRegistry:
 
     def process_gm_record(self, r):
         # Break down certificate
-        name = r["Credential"]
-        del r["Credential"]
+        if 'Credential' in r.keys():
+            name = r["Credential"]
+            del r["Credential"]
+        else:
+            pprint(r)
+            name = "Grand Master"
         r["Certification"] = name
         r["Certificate_Name"] = "Grand Master"
         r["Certificate_Version"] = "D7" if ("7" in str(name)) else "D8"
@@ -309,7 +314,7 @@ class Pubsub:
         self.publisher = pubsub_v1.PublisherClient()
         self.subscriber = pubsub_v1.SubscriberClient()
 
-    def publish(self, data):
+    def publish(self, data=None):
 
         # The `topic_path` method creates a fully qualified identifier
         # in the form `projects/{project_id}/topics/{topic_name}`
@@ -318,9 +323,10 @@ class Pubsub:
         topic_path = self.publisher.topic_path(pid, tn)
 
         # Data must be a bytestring
-        data = self.encode(data)
+        # data = self.encode(data)
+
         # When you publish a message, the client returns a future.
-        future = self.publisher.publish(topic_path, data=data)
+        future = self.publisher.publish(topic_path)
         print(future.result())
 
         print('Published messages.')
@@ -370,21 +376,16 @@ def results(request):
     # request_json = request.get_json(silent=True)
 
     # Logic goof
-    # limit = escape(request.args.get('limit'))
     fetch = escape(request.args.get('fetch'))
-    gm = escape(request.args.get('gm'))
-    # Write to BigQuery
-    log = True if request.args.get('log') is not None else False
 
     # Initialize objects.
-    registry = AcquiaRegistry(log=log)
+    registry = AcquiaRegistry()
     bq = BigQuery()
     pubsub = Pubsub()
 
     # Run crawler on requst.
     if fetch is not None:
-        gm = True if gm is not None else False
-        pubsub.publish({"gm": gm})
+        pubsub.publish()
 
     # Run record query.
     query = 'SELECT * FROM ' + bq.dataset_id + '.' + bq.table_id

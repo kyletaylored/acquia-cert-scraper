@@ -14,12 +14,25 @@ credentials = service_account.Credentials.from_service_account_file(
 )
 
 # Get records
-crawler = AcquiaRegistry(4, gm=True)
-records = crawler.get_all_records()
-pprint(records)
-# Connect to BigQuery
+"""
+Crawl Acquia certifications.
+"""
+acquia = AcquiaRegistry()
 bq = BigQuery(credentials=credentials)
-# Clear out data
-bq.delete_all()
-# Record all records
-bq.record(records, 'guid')
+
+# Clear all records
+# res = bq.delete_all()
+# pprint(res)
+
+# Fetch regular records.
+records = acquia.get_all_records()
+# res = bq.record(records, 'guid')
+# pprint(res)
+
+# Fetch Grand Master records.
+acquia.set_gm(True)
+records = acquia.get_all_records()
+# res = bq.record(records, 'guid')
+# pprint(res)
+
+print("Records recorded.")
