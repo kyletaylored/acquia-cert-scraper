@@ -323,10 +323,10 @@ class Pubsub:
         topic_path = self.publisher.topic_path(pid, tn)
 
         # Data must be a bytestring
-        # data = self.encode(data)
+        data = self.encode({})
 
         # When you publish a message, the client returns a future.
-        future = self.publisher.publish(topic_path)
+        future = self.publisher.publish(topic_path, data=data)
         print(future.result())
 
         print('Published messages.')
