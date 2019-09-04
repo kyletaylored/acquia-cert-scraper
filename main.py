@@ -24,10 +24,13 @@ class BigQuery:
     def __init__(self, credentials=None):
         # Prep BigQuery client
         self.dataset_id = env_vars('BQ_DATASET_ID')
-        self.table_id = env_vars('BQ_TABLE_ID')
-        self.bq_check = True if self.dataset_id is not None and self.table_id is not None else False
+        self.write_table_id = env_vars('BQ_WRITE_TABLE')
+        self.read_table_id = env_vars('BQ_READ_TABLE')
+        self.bq_check = True if None not in (
+            self.dataset_id, self.write_table_id, self.read_table_id) else False
         self.client = None
-        self.table = None
+        self.write_table = None
+        self.read_table = None
         if self.bq_check is True:
             if credentials is None:
                 self.client = bigquery.Client()
@@ -36,9 +39,14 @@ class BigQuery:
                     credentials=credentials,
                     project=credentials.project_id,
                 )
-            table_ref = self.client.dataset(
-                self.dataset_id).table(self.table_id)
-            self.table = self.client.get_table(table_ref)
+
+            # Get dataset reference
+            dataset = self.client.dataset(self.dataset_id)
+            # Get table references
+            wt = dataset.table(self.write_table_id)
+            rt = dataset.table(self.read_table_id)
+            self.write_table = self.client.get_table(wt)
+            self.read_table = self.client.get_table(rt)
 
     def record(self, records, id):
         """Write records to BigQuery instance.
@@ -55,24 +63,14 @@ class BigQuery:
 
         # Insert rows
         err = self.client.insert_rows_json(
-            self.table, records, row_ids=row_ids)
+            self.write_table, records, row_ids=row_ids)
 
         return err
 
     def query(self, query):
-        query_job = self.client.query(str(query))
-
-        # Run query
-        results = query_job.result()  # Waits for job to complete.
-        return results
-
-    def delete_all(self):
-        did = self.dataset_id
-        tid = self.table_id
-        query = 'DELETE ' + did + '.' + tid + ' WHERE true'
-
-        # Run query
         query_job = self.client.query(query)
+
+        # Run query
         results = query_job.result()  # Waits for job to complete.
         return results
 
@@ -388,7 +386,7 @@ def results(request):
         pubsub.publish()
 
     # Run record query.
-    query = 'SELECT * FROM ' + bq.dataset_id + '.' + bq.table_id
+    query = 'SELECT * FROM ' + bq.dataset_id + '.' + bq.read_table_id
     records = bq.get_records(query)
 
     # pprint(records)
