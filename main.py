@@ -139,7 +139,7 @@ class AcquiaRegistry:
 
         # Run request
         query = requests.get(self.url, params=params)
-        pprint(query.url)
+
         return query.text
 
     def get_table(self):
