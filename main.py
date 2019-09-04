@@ -428,8 +428,9 @@ def crawl_records(event, context):
     bq = BigQuery()
 
     # Clear all records
-    res = bq.delete_all()
-    pprint(res)
+    # @todo can't do this yet (or ever) do to streaming input conflicts
+    # res = bq.delete_all()
+    # pprint(res)
 
     # Fetch regular records.
     records = acquia.get_all_records()
