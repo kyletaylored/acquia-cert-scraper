@@ -68,7 +68,7 @@ class BigQuery:
     def delete_all(self):
         did = self.dataset_id
         tid = self.table_id
-        query = 'DELETE' + did + '.' + tid + 'WHERE true'
+        query = 'DELETE ' + did + '.' + tid + ' WHERE true'
 
         # Run query
         query_job = self.client.query(query)
