@@ -102,6 +102,13 @@ class AcquiaRegistry:
         self.time = time.time()
         self.gm = gm
 
+        # Load org replacements
+        orgs = {}
+        with open('orgs.json', 'r') as f:
+            orgs = json.load(f)
+
+        self.orgs = orgs
+
         # Switch between regular registry and Grand Masters.
         if gm is True:
             self.url = self.gmasterUrl
@@ -186,33 +193,19 @@ class AcquiaRegistry:
 
         for r in records:
 
-            # Clean org
-            r["Organization"] = self.clean_org(r["Organization"])
-
-            # Format date
-            if r["Awarded"] is None:
-                now = datetime.now()
-                r["Awarded"] = now.strftime('%B %d, %Y')
-
-            date = datetime.strptime(r["Awarded"], '%B %d, %Y')
-            r["Awarded"] = date.strftime('%Y-%m-%d')
-
-            # Process country
-            loc = r["Location"].split(",")
-            r["City"] = loc[0].strip()
-            r["State"] = loc[1].strip()
-            country = self.lchop(r["Location"], loc[0]+", "+loc[1])
-            r["Country"] = self.clean_country(country.strip())
-
             # Process GM differently than standard certs.
             if self.gm is True:
                 self.process_gm_record(r)
             else:
                 self.process_record(r)
 
-            # Create GUID
-            hash_str = r["Name"]+r["Certification"]+r["Location"]
-            r["guid"] = self.create_hash(hash_str.encode())
+            # Run through processors.
+            self.process_org(r)
+            self.process_date(r)
+            self.process_location(r)
+            self.process_guid(r)
+
+            pprint(r)
 
         return records
 
@@ -291,9 +284,38 @@ class AcquiaRegistry:
         # Eventually get list of countries to fix.
         return record
 
-    def clean_org(self, org):
-        # Eventually clean org names
-        return org
+    def process_location(self, r):
+        # Process country
+        loc = r["Location"].split(",")
+        r["City"] = loc[0].strip()
+        r["State"] = loc[1].strip()
+        country = self.lchop(r["Location"], loc[0]+", "+loc[1])
+        r["Country"] = self.clean_country(country.strip())
+
+    def process_org(self, r):
+        # Only overwrite org is match exists.
+        org = r["Organization"]
+        for key in self.orgs.keys():
+            if org is not None and org in key:
+                r["Organization"] = self.orgs.get(org)
+                break
+
+    def process_date(self, r):
+        # Dates
+        now = datetime.now()
+        r["timestamp"] = datetime.timestamp(now)
+
+        # Format date
+        if r["Awarded"] is None:
+            r["Awarded"] = now.strftime('%B %d, %Y')
+
+        date = datetime.strptime(r["Awarded"], '%B %d, %Y')
+        r["Awarded"] = date.strftime('%Y-%m-%d')
+
+    def process_guid(self, r):
+        # Create GUID
+        hash_str = r["Name"]+r["Certification"]+r["Location"]
+        r["guid"] = self.create_hash(hash_str.encode())
 
     def create_hash(self, data):
         hash_str = md5(data)
