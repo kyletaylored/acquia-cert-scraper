@@ -14,6 +14,7 @@ import requests
 import time
 import os
 import base64
+import re
 
 
 class BigQuery:
@@ -205,8 +206,6 @@ class AcquiaRegistry:
             self.process_location(r)
             self.process_guid(r)
 
-            pprint(r)
-
         return records
 
     def get_all_records(self):
@@ -293,10 +292,24 @@ class AcquiaRegistry:
         r["Country"] = self.clean_country(country.strip())
 
     def process_org(self, r):
-        # Only overwrite org is match exists.
+        # Only overwrite org is match exists. Clean whitespace
         org = r["Organization"]
+
+        # Don't process null
+        if org is None:
+            return 0
+
+        # Create default, cleaned org
+        r["Organization"] = r["Organization"].strip()
+
+        # Catch weird empties.
+        if len(org) < 2:
+            r["Organization"] = ""
+            return 0
+
+        # Search for key
         for key in self.orgs.keys():
-            if org is not None and org in key:
+            if re.search(key, org, re.IGNORECASE):
                 r["Organization"] = self.orgs.get(org)
                 break
 
