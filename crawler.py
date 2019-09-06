@@ -32,13 +32,14 @@ bq = BigQuery(credentials=credentials)
 
 # Fetch regular records.
 records = acquia.get_all_records()
-res = bq.record(records, 'guid')
-pprint(res)
+# pprint(records)
+# res = bq.record(records, 'guid')
+# pprint(res)
 
 # Fetch Grand Master records.
 acquia.set_gm(True)
 records = acquia.get_all_records()
-res = bq.record(records, 'guid')
-pprint(res)
+# res = bq.record(records, 'guid')
+# pprint(res)
 
 print("Records recorded.")
