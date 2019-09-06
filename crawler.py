@@ -37,8 +37,11 @@ records = acquia.get_all_records()
 
 # Fetch Grand Master records.
 acquia.set_gm(True)
-records = acquia.get_all_records()
+records.append(acquia.get_all_records())
 # res = bq.record(records, 'guid')
 # pprint(res)
+
+with open('acquia.json', 'w') as outfile:
+    json.dump(records, outfile)
 
 print("Records recorded.")
