@@ -310,7 +310,7 @@ class AcquiaRegistry:
         # Search for key
         for key in self.orgs.keys():
             if re.search(key, org, re.IGNORECASE):
-                r["Organization"] = self.orgs.get(org)
+                r["Organization"] = self.orgs.get(key)
                 break
 
     def process_date(self, r):
