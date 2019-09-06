@@ -1,0 +1,17 @@
+steps:
+  - name: gcr.io/cloud-builders/gcloud
+    args:
+      - functions
+      - deploy
+      - --trigger-topic=crawler-fetch # Pub/Sub trigger with topic
+      - --runtime python37
+      - --entry-point=crawl_records # Defined function in main.py
+      - crawl-fetch # Cloud Function name
+  - name: gcr.io/cloud-builders/gcloud
+    args:
+      - functions
+      - deploy
+      - --trigger-http # HTTP trigger
+      - --runtime python37
+      - --entry-point=results # Defined function in main.py
+      - results # Cloud Function name
