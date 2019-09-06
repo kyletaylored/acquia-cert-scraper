@@ -1,5 +1,5 @@
 steps:
-  - name: gcr.io/cloud-builders/gcloud
+  - name: "Deploy Cloud Function: crawler-fetch"
     args:
       - functions
       - deploy
@@ -7,7 +7,7 @@ steps:
       - --runtime=python37
       - --entry-point=crawl_records # Defined function in main.py
       - crawl-fetch # Cloud Function name
-  - name: gcr.io/cloud-builders/gcloud
+  - name: "Deploy Cloud Function: results"
     args:
       - functions
       - deploy
