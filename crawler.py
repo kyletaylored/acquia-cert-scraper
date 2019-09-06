@@ -19,7 +19,6 @@ os.environ['BQ_DATASET_ID'] = keys['BQ_DATASET_ID']
 os.environ['BQ_WRITE_TABLE'] = keys['BQ_WRITE_TABLE']
 os.environ['BQ_READ_TABLE'] = keys['BQ_READ_TABLE']
 
-# Get records
 """
 Crawl Acquia certifications.
 """
