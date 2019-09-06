@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urlparse
 from hashlib import md5
-from google.cloud import bigquery, pubsub_v1
+from google.cloud import bigquery
 import multiprocessing as mp
 import pandas as pd
 import json
@@ -335,62 +335,6 @@ class AcquiaRegistry:
         return hash_str.hexdigest()
 
 
-class Pubsub:
-    # Pub/Sub vars
-    project_id = "acquia-certifications-api"
-    topic_name = "crawler-fetch"
-    subscription_name = "crawler-run"
-    publisher = None
-    subscriber = None
-
-    def __init__(self):
-        self.publisher = pubsub_v1.PublisherClient()
-        self.subscriber = pubsub_v1.SubscriberClient()
-
-    def publish(self, data=None):
-
-        # The `topic_path` method creates a fully qualified identifier
-        # in the form `projects/{project_id}/topics/{topic_name}`
-        pid = self.project_id
-        tn = self.topic_name
-        topic_path = self.publisher.topic_path(pid, tn)
-
-        # Data must be a bytestring
-        data = self.encode({})
-
-        # When you publish a message, the client returns a future.
-        future = self.publisher.publish(topic_path, data=data)
-        print(future.result())
-
-        print('Published messages.')
-
-    def subscribe(self, data):
-        # The `subscription_path` method creates a fully qualified identifier
-        # in the form `projects/{project_id}/subscriptions/{subscription_name}`
-        subscription_path = self.subscriber.subscription_path(
-            self.project_id, self.subscription_name)
-
-        def callback(message):
-            print('Received message: {}'.format(message))
-            message.ack()
-
-        self.subscriber.subscribe(subscription_path, callback=callback)
-
-        # The subscriber is non-blocking. We must keep the main thread from
-        # exiting to allow it to process messages asynchronously in the background.
-        print('Listening for messages on {}'.format(subscription_path))
-        while True:
-            time.sleep(60)
-
-    def encode(self, data):
-        data = str(data)
-        return data.encode()
-
-    def decode(self, data):
-        data = str(data)
-        return data.decode()
-
-
 """
 Main functions start
 """
@@ -408,17 +352,9 @@ def results(request):
     """
     # request_json = request.get_json(silent=True)
 
-    # Logic goof
-    fetch = escape(request.args.get('fetch'))
-
     # Initialize objects.
     registry = AcquiaRegistry()
     bq = BigQuery()
-    pubsub = Pubsub()
-
-    # Run crawler on requst.
-    if fetch is not None:
-        pubsub.publish()
 
     # Run record query.
     query = 'SELECT * FROM ' + bq.dataset_id + '.' + bq.read_table_id
