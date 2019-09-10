@@ -217,13 +217,21 @@ class AcquiaRegistry:
 
         # Close and join processing pool.
         pool.close()
-        pool.join()
+        # pool.join()
+
+        # Wait for jobs to finish.
+        while self.multiprocess_status():
+            time.sleep(10)
+            self.print_runtime()
 
         # Merge into single array
         records = []
         for res in results:
             for rec in res:
                 records.append(rec)
+
+        # Processing finished
+        pprint("Processing complete: " + str(len(records)) + ", GM: " + str(self.gm))
 
         return records
 
@@ -340,6 +348,11 @@ class AcquiaRegistry:
     def print_runtime(self):
         pprint("Process time: " + str(round(time.time() - self.time, 2)))
 
+    def multiprocess_status(self):
+            act = mp.active_children()
+            if len(act)==0:
+                return True
+            return False
 
 """
 Main functions start
