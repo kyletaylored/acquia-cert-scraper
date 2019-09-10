@@ -31,6 +31,7 @@ bq = BigQuery(credentials=credentials)
 
 # Fetch regular records.
 records = acquia.get_all_records()
+acquia.print_runtime()
 # pprint(records)
 # res = bq.record(records, 'guid')
 # pprint(res)
@@ -43,5 +44,3 @@ records.append(acquia.get_all_records())
 
 with open('acquia.json', 'w') as outfile:
     json.dump(records, outfile)
-
-print("Records recorded.")

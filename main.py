@@ -16,7 +16,6 @@ import os
 import base64
 import re
 
-
 class BigQuery:
     """
     Create connection to BigQuery instance.
@@ -214,7 +213,11 @@ class AcquiaRegistry:
 
         # Run processing pool
         pool = mp.Pool(processes=3)
-        results = pool.map(self.get_new_record, range(0, page + 1))
+        results = pool.imap(self.get_new_record, range(0, page + 1))
+
+        # Close and join processing pool.
+        pool.close()
+        pool.join()
 
         # Merge into single array
         records = []
@@ -333,6 +336,9 @@ class AcquiaRegistry:
     def create_hash(self, data):
         hash_str = md5(data)
         return hash_str.hexdigest()
+
+    def print_runtime(self):
+        pprint("Process time: " + str(round(time.time() - self.time, 2)))
 
 
 """
