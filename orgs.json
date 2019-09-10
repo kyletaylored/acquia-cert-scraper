@@ -1,5 +1,5 @@
 {
-  "FFW|BlinkReaction|Blink|Blink Reaction|ProPeople|Pro People": "FFW",
+  "^FFW|BlinkReaction|Blink|Blink Reaction|ProPeople|Pro People": "FFW",
   "Acquia": "Acquia",
   "Bounteous": "Bounteous",
   "Genuine Interactive": "Genuine",
