@@ -338,7 +338,7 @@ class AcquiaRegistry:
 
     def process_guid(self, r):
         # Create GUID
-        hash_str = r["Name"]+r["Certification"]+r["Location"]
+        hash_str = r["Name"]+r["Certification"]
         r["guid"] = self.create_hash(hash_str.encode())
 
     def create_hash(self, data):
